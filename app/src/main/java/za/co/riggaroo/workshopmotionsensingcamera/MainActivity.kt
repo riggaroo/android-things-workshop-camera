@@ -2,31 +2,45 @@ package za.co.riggaroo.workshopmotionsensingcamera
 
 import android.app.Activity
 import android.os.Bundle
+import android.util.Log
+import com.google.android.things.pio.Gpio
+import com.google.android.things.pio.GpioCallback
+import com.google.android.things.pio.PeripheralManagerService
 
-/**
- * Skeleton of an Android Things activity.
- *
- * Android Things peripheral APIs are accessible through the class
- * PeripheralManagerService. For example, the snippet below will open a GPIO pin and
- * set it to HIGH:
- *
- * <pre>{@code
- * val service = PeripheralManagerService()
- * val mLedGpio = service.openGpio("BCM6")
- * mLedGpio.setDirection(Gpio.DIRECTION_OUT_INITIALLY_LOW)
- * mLedGpio.value = true
- * }</pre>
- * <p>
- * For more complex peripherals, look for an existing user-space driver, or implement one if none
- * is available.
- *
- * @see <a href="https://github.com/androidthings/contrib-drivers#readme">https://github.com/androidthings/contrib-drivers#readme</a>
- *
- */
+
 class MainActivity : Activity() {
+
+    private val MOTION_SENSOR_PIN = "GPIO_35"
+    private lateinit var gpioMotionSensor: Gpio
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        initializeMotionSensor()
+
+    }
+
+    private fun initializeMotionSensor() {
+        gpioMotionSensor = PeripheralManagerService().openGpio(MOTION_SENSOR_PIN)
+        gpioMotionSensor.setDirection(Gpio.DIRECTION_IN)
+        gpioMotionSensor.setActiveType(Gpio.ACTIVE_HIGH)
+        gpioMotionSensor.setEdgeTriggerType(Gpio.EDGE_BOTH)
+        gpioMotionSensor.registerGpioCallback(object : GpioCallback() {
+            override fun onGpioEdge(gpio: Gpio): Boolean {
+                if (gpio.value) {
+                    Log.d("MainActivity", "onGpioEdge: motion detected")
+                } else {
+                    Log.d("MainActivity", "onGpioEdge: NO MOTION detected")
+                }
+                return true
+            }
+        })
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        gpioMotionSensor.close()
     }
 }
