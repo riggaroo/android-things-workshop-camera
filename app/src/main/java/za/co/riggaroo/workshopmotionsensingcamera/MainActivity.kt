@@ -13,13 +13,22 @@ class MainActivity : Activity() {
     private val MOTION_SENSOR_PIN = "GPIO_35"
     private lateinit var gpioMotionSensor: Gpio
 
+    private var ledGpio: Gpio? = null
+    private val LED_GPIO_PIN: String = "GPIO_174"
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        initializeLed()
         initializeMotionSensor()
 
+    }
+
+    private fun initializeLed() {
+        ledGpio = PeripheralManagerService().openGpio(LED_GPIO_PIN)
+        ledGpio?.setDirection(Gpio.DIRECTION_OUT_INITIALLY_LOW)
     }
 
     private fun initializeMotionSensor() {
@@ -29,6 +38,7 @@ class MainActivity : Activity() {
         gpioMotionSensor.setEdgeTriggerType(Gpio.EDGE_BOTH)
         gpioMotionSensor.registerGpioCallback(object : GpioCallback() {
             override fun onGpioEdge(gpio: Gpio): Boolean {
+                ledGpio?.value = gpio.value
                 if (gpio.value) {
                     Log.d("MainActivity", "onGpioEdge: motion detected")
                 } else {
@@ -37,10 +47,12 @@ class MainActivity : Activity() {
                 return true
             }
         })
+
     }
 
     override fun onDestroy() {
         super.onDestroy()
         gpioMotionSensor.close()
+        ledGpio?.close()
     }
 }
