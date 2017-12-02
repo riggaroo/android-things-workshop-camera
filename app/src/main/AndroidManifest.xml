@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="za.co.riggaroo.workshopmotionsensingcamera">
 
+    <uses-permission android:name="android.permission.CAMERA"/>
     <application>
         <uses-library android:name="com.google.android.things" />
 

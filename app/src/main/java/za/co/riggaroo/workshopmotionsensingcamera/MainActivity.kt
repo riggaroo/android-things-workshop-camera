@@ -13,12 +13,13 @@ import com.google.android.things.pio.PeripheralManagerService
 
 class MainActivity : Activity() {
 
-    private val MOTION_SENSOR_PIN = "GPIO_35"
+    private val MOTION_SENSOR_PIN = "GPIO2_IO03"
+    private val LED_GPIO_PIN: String = "GPIO6_IO14"
+    private val BUTTON_PIN: String = "GPIO6_IO15"
+
     private lateinit var gpioMotionSensor: Gpio
-
-    private var ledGpio: Gpio? = null
-    private val LED_GPIO_PIN: String = "GPIO_174"
-
+    private lateinit var ledGpio: Gpio
+    private lateinit var buttonGpio: Gpio
 
     private lateinit var camera: CustomCamera
     private lateinit var motionImageView: ImageView
@@ -28,9 +29,30 @@ class MainActivity : Activity() {
         setContentView(R.layout.activity_main)
 
         initializeLed()
+        initializeButton()
         initializeMotionSensor()
         setupCamera()
         setupUI()
+    }
+
+
+    private fun initializeButton() {
+        buttonGpio = PeripheralManagerService().openGpio(BUTTON_PIN)
+        buttonGpio.setDirection(Gpio.DIRECTION_IN)
+        buttonGpio.setActiveType(Gpio.ACTIVE_HIGH)
+        buttonGpio.setEdgeTriggerType(Gpio.EDGE_BOTH)
+        buttonGpio.registerGpioCallback(object : GpioCallback() {
+            override fun onGpioEdge(gpio: Gpio): Boolean {
+                ledGpio.value = gpio.value
+                if (gpio.value) {
+                    camera.takePicture()
+                    Log.d("MainActivity", "onGpioEdge: Button on")
+                } else {
+                    Log.d("MainActivity", "onGpioEdge: Button off")
+                }
+                return true
+            }
+        })
     }
 
     private fun setupUI() {
@@ -39,7 +61,7 @@ class MainActivity : Activity() {
 
     private fun initializeLed() {
         ledGpio = PeripheralManagerService().openGpio(LED_GPIO_PIN)
-        ledGpio?.setDirection(Gpio.DIRECTION_OUT_INITIALLY_LOW)
+        ledGpio.setDirection(Gpio.DIRECTION_OUT_INITIALLY_LOW)
     }
 
     private fun initializeMotionSensor() {
@@ -49,7 +71,7 @@ class MainActivity : Activity() {
         gpioMotionSensor.setEdgeTriggerType(Gpio.EDGE_BOTH)
         gpioMotionSensor.registerGpioCallback(object : GpioCallback() {
             override fun onGpioEdge(gpio: Gpio): Boolean {
-                ledGpio?.value = gpio.value
+                ledGpio.value = gpio.value
                 if (gpio.value) {
                     camera.takePicture()
                     Log.d("MainActivity", "onGpioEdge: motion detected")
@@ -77,6 +99,6 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         super.onDestroy()
         gpioMotionSensor.close()
-        ledGpio?.close()
+        ledGpio.close()
     }
 }
